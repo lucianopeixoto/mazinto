@@ -1,0 +1,59 @@
+////////////////////////////////////////////////////////////////
+// Arquivo contendo memória de tranformações executadas enquando 
+// desenvolviamos a lógica do programa
+// 
+// Luciano Peixoto
+// Erik Kulhavy 
+////////////////////////////////////////////////////////////////
+
+Exemplo 2:
+FDVDFFDFVDDDVDFDVDVFFVDDVDFFDDDVDDVDDVDVFFFFFD
+FFFFDFVDDFFFVFFVDFFFDDFFFVFFFFFD
+FFFFDEDFFVEFFFDDFFVFFFFD
+
+FFFFDEDFFVEFFFDDFFVFFFFD
+FFFFDEDFFVEFFFDDFVFFFD
+FFFFDEDFFVEFFFDDVFFD
+FFFFDEDFFVEFFFDEFD
+FFFFDEDFVFFFDEFD
+FFFFDEDVFFDEFD
+FFFFDEEFDEFD
+
+FFFFDEDVFDEFD
+FFFFDEEDEFD
+
+FFFFDEDFV
+
+
+// Exemplo interessante aonde o final estava logo a esquerda do inicio,
+// porém outras opções atrapalhavam a chegada
+Exemplo 3:
+
+dvdfvdvdd
+ffvfd
+fvd
+e
+
+
+// Foram utilizadas as seguintes transformações:
+
+dvd = f
+dvf = e
+dve = v
+
+fvd = e
+fvf = v
+fve = v
+
+evd = v
+evf = d
+eve = f
+
+
+// Seed para se gerar o labirinto utilizado no exemplo no aplicativo gerador
+// presente no site http://www.xefer.com/maze-generator
+// Obs.: Para utilizar um seed adicionar "?<SEED>" ao final do endereço http
+// substituindo <seed> pela seed desejada
+
+Exemplo 2: ndngijmfmiidnjdnjdio
+Exemplo 1: ndmhjmihinkdnodnodio

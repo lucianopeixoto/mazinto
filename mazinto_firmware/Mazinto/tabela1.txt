@@ -1,0 +1,19 @@
+Sensores    Estado
+
+1234
+0000        Volta
+0001        Direita
+0010        Corrige Direita
+0011        Direita
+0100        Corrige Esqueda
+0101        Direita
+0110        Segue Reto
+0111        Direita
+1000        Esquerda
+1001        Direita
+1010        Corrige Direita
+1011        Direita
+1100        Corrige Esquerda
+1101        Direita
+1110        Segue Reto
+1111        Chegou

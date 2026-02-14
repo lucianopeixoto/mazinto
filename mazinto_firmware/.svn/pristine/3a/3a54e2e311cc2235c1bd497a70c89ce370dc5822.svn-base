@@ -1,0 +1,518 @@
+/*
+  Maze Solving Robot
+  Luciano Peixoto
+  Erik Kulhavy
+*/
+
+#define PIN_LED         13
+#define PIN_LEFT_MOTOR  6
+#define PIN_RIGHT_MOTOR 3
+#define PIN_LEFT_A      8
+#define PIN_LEFT_B      7
+#define PIN_RIGHT_A     4
+#define PIN_RIGHT_B     2
+#define PIN_SENSOR_1    11          // TODO: Rever a pinagem dos sensores
+#define PIN_SENSOR_2    9           // 
+#define PIN_SENSOR_3    10          // 
+#define PIN_SENSOR_4    12          // -----
+// #define FLAG_DEBUG      0b1000000   // Definição das Flags do sistema
+// #define FLAG_RETURN     0b0100000   // 
+// #define FLAG_KNOWN      0b0010000   // 
+// #define FLAG_ERROR      0b0001000   // 
+#define FOLLOW_SPEED    60         // Velocidade em linha reta
+#define TURN_SPEED      200         // Velocidade em curva
+#define LEFT_TIME       400
+#define RIGHT_TIME      400
+
+//#define BRAKE 256
+
+// byte sysFlag;       // Armazena as flags do sistema, cada bit do byte representa uma flag
+                    // Flags: DRKE *** Debug Retorno Known Error
+
+// Variáveis Globais:                    
+int     modoLinha,
+        known,
+        initialN,
+        finalN,
+        n;
+char    initialPath[200],
+        finalPath [200];
+
+void setup() {
+    //sysFlag = 0b10000000;
+    Serial.begin (9600);
+    modoLinha = -1;
+    known = 0;
+    Serial.print ("Config. inicial carregada...\n");
+    // Inicializando os pinos e etc...
+    // ex: pinMode(13, OUTPUT);
+    Serial.begin (9600);
+    
+    Serial.print ("Iniciando Pinos...\n");
+    
+    pinMode(PIN_LED, OUTPUT);
+    digitalWrite (PIN_LED, 0);
+    
+    pinMode(PIN_LEFT_MOTOR, OUTPUT);
+    analogWrite (PIN_LEFT_MOTOR, 0);
+    pinMode(PIN_RIGHT_MOTOR, OUTPUT);
+    analogWrite (PIN_RIGHT_MOTOR, 0);
+    pinMode(PIN_LEFT_A, OUTPUT);
+    digitalWrite (PIN_LEFT_A, 0);
+    pinMode(PIN_LEFT_B, OUTPUT);
+    digitalWrite (PIN_LEFT_B, 0);  
+    pinMode(PIN_RIGHT_A, OUTPUT);
+    digitalWrite (PIN_RIGHT_A, 0);
+    pinMode(PIN_RIGHT_B, OUTPUT);
+    digitalWrite (PIN_RIGHT_B, 0); 
+    Serial.print ("Motores...: OK\n");
+
+    pinMode(PIN_SENSOR_1, INPUT); 
+    pinMode(PIN_SENSOR_2, INPUT); 
+    pinMode(PIN_SENSOR_3, INPUT); 
+    pinMode(PIN_SENSOR_4, INPUT);
+    Serial.print ("Sensores..: OK\n");
+}
+
+// Loop Principal
+void loop() {
+         
+    // Reconhece o tipo de linha a se seguir (preta ou branca)
+    while (modoLinha == -1){
+        digitalWrite (PIN_LED, 1);
+        delay (100);
+        digitalWrite (PIN_LED, 0);
+        delay (50);
+        if (digitalRead(PIN_SENSOR_1) == 0 && digitalRead(PIN_SENSOR_2) == 1 && digitalRead(PIN_SENSOR_3) == 1 && digitalRead(PIN_SENSOR_4) == 0){
+            modoLinha = 1;
+        }
+        if (digitalRead(PIN_SENSOR_1) == 1 && digitalRead(PIN_SENSOR_2) == 0 && digitalRead(PIN_SENSOR_3) == 0 && digitalRead(PIN_SENSOR_4) == 1){
+            modoLinha = 0;
+        }
+    }
+    
+    // Contagem regressiva inicial:
+    for (n = 3; n>0; n--){  
+        Serial.print ("Contagem: ");
+        Serial.print (n);            
+        Serial.print ("\n");
+        digitalWrite (PIN_LED, 1);
+        delay (200);
+        digitalWrite (PIN_LED, 0);
+        delay (800);
+    }
+    
+    initialN = 0;
+    finalN = 0;
+    
+    // Loop para ser executado quando o caminho correto já for conhecido
+    while (known == 1){        
+        if ((finalPath[finalN] == 'S') && testExit()) {
+            finalN++;
+            Serial.print("Final \n");
+            initialPath[initialN] = 'S';
+            initialN++;            
+            initialPath[initialN] = '\0';
+            known = 1;
+            engineControl(0,0);
+        }
+        if ((finalPath[finalN] == 'D' )&& testRight()){
+        
+            finalN++;
+            n=0;
+            while (n<100){
+                followLine();
+                delay(1);
+                n++;
+            }            
+            while (n<200){
+                engineControl (TURN_SPEED, -TURN_SPEED);
+                delay(1);
+                n++;
+            }
+            while (n< 300 && !(digitalRead(PIN_SENSOR_3)==modoLinha)){
+                engineControl (TURN_SPEED, -TURN_SPEED);
+                delay(1);
+            }
+            if (n<300) {
+                Serial.print("Direita \n");
+                initialPath[initialN] = 'D';
+                initialN++;
+                engineControl (0,0);
+                delay (100);
+            }
+        }
+        if (finalPath [finalN] && testLeft()){
+            finalN++;
+            n=0;
+            while (n<100){
+                followLine();
+                delay(1);
+                n++;
+                if (testRight()) n = 1000;
+            }
+            while (n<200){
+                engineControl (-TURN_SPEED, TURN_SPEED);
+                delay(1);
+                n++;
+            }
+            while (n<300 && !(digitalRead(PIN_SENSOR_2)==modoLinha)){
+                engineControl (-TURN_SPEED, TURN_SPEED);
+                delay(1);
+            }
+            if (n<300){                    
+                engineControl (0,0);
+                delay (100);
+                Serial.print("Esquerda \n");
+                initialPath[initialN] = 'E';
+                initialN++;
+            }
+        }
+        if (finalPath [finalN] == 'F' && testFront()){
+            finalN++;
+            engineControl(0,0);
+            while (1){
+            }
+        }
+        
+        
+        
+        if (known == 1){
+            followLine();
+        } else {
+            engineControl (0,0);
+        }
+        
+        delay(1);
+    }  
+
+    // Loop para ser executado enquanto o robô não conhece o caminho correto
+    while (known == 0){        
+        // if (testExit()) {
+            // Serial.print("Final \n");
+            // initialPath[initialN] = 'S';
+            // initialN++;            
+            // initialPath[initialN] = '\0';
+            // engineControl(0,0);
+        // }
+        
+        if (testRight()){
+            n=0;
+            while (n<100){
+                followLine();
+                delay(1);
+                n++;
+            }
+            if (testExit()) {
+                Serial.print("Anotado: Final \n");
+                initialPath[initialN] = 'S';
+                initialN++;
+                initialPath[initialN] = '\0';
+                known = 1;
+                n = 1000;
+                engineControl(0,0);
+            }
+            while (n<200){
+                engineControl (TURN_SPEED, -TURN_SPEED);
+                delay(1);
+                n++;
+            }
+            while (n< 300 && !(digitalRead(PIN_SENSOR_3)==modoLinha)){
+                engineControl (TURN_SPEED, -TURN_SPEED);
+                delay(1);
+            }
+            if (n<300) {
+                Serial.print("Anotado: Direita \n");
+                initialPath[initialN] = 'D';
+                initialN++;
+                engineControl (0,0);
+                delay (100);
+            }
+        }
+        
+        if (testLeft()){
+            n=0;
+            while (n<100){
+                followLine();
+                delay(1);
+                n++;
+                if (testRight()) n = 1000;
+            }
+            if (n < 300 && testExit()) {
+                Serial.print("Anotado: Final \n");
+                initialPath[initialN] = 'S';
+                initialN++;            
+                initialPath[initialN] = '\0';
+                known = 1;
+                n = 1000;
+                engineControl(0,0);
+            }
+            if (n<300 && testFront()){
+                Serial.print("Anotado: Frente \n");                    
+                initialPath[initialN] = 'F';
+                initialN++;
+                
+                n = 1000;
+            }
+            while (n<200){
+                engineControl (-TURN_SPEED, TURN_SPEED);
+                delay(1);
+                n++;
+            }
+            while (n<300 && !(digitalRead(PIN_SENSOR_2)==modoLinha)){
+                engineControl (-TURN_SPEED, TURN_SPEED);
+                delay(1);
+            }
+            if (n<300){
+                engineControl (0,0);
+                delay (100);
+                Serial.print("Anotado: Esquerda \n");
+                initialPath[initialN] = 'E';
+                initialN++;
+            }
+        }
+        
+        if (testDeadEnd()){
+            Serial.print("Anotado: Volta \n");
+            initialPath[initialN] = 'V';
+            initialN++;
+            n=0;
+            while (n<100){
+                followLine();
+                delay(1);
+                n++;
+            }
+            while (n<300 && !(digitalRead(PIN_SENSOR_3)==modoLinha)){
+                engineControl (TURN_SPEED, -TURN_SPEED);
+                delay(1);
+            }
+            engineControl (0,0);
+            delay (100);
+        }
+        
+        if (known == 0){
+            followLine();
+        } else {
+            engineControl (0,0);
+        }
+        
+    }  
+
+    initialN = 0;
+    
+    Serial.print ("Caminho Realizado: ");    
+    Serial.print (initialPath);
+    Serial.print ("\n");
+    
+    // Loop Para ser executado ao se otimizar o caminho
+    while (initialPath[initialN-1] != 'S'){
+        // Inicio do tratamento das decisões:
+        finalPath[finalN] = initialPath[initialN];
+        // Se a decisão for V (Voltar)
+        while (finalPath[finalN] == 'V'){
+            initialN ++;
+            finalN --;
+            switch (finalPath[finalN]){
+                case 'D':
+                    switch (initialPath[initialN]){
+                        case 'D':
+                            finalPath[finalN] = 'F';
+                            break;
+                        case 'F':
+                            finalPath[finalN] = 'E';
+                            break;
+                        case 'E':
+                            finalPath[finalN] = 'V';
+                            break;
+                    }
+                    break;
+                case 'F':
+                    switch (initialPath[initialN]){
+                        case 'D':
+                            finalPath[finalN] = 'E';
+                            break;
+                        case 'F':
+                            finalPath[finalN] = 'V';
+                            break;
+                        case 'E':
+                            finalPath[finalN] = 'V';
+                            break;
+                    }
+                    break;
+                case 'E':
+                    switch (initialPath[initialN]){
+                        case 'D':
+                            finalPath[finalN] = 'V';
+                            break;
+                        case 'F':
+                            finalPath[finalN] = 'D';
+                            break;
+                        case 'E':
+                            finalPath[finalN] = 'F';
+                            break;
+                    }
+                    break;
+                default:
+                    //sysFlag = sysFlag | FLAG_ERROR;
+                    break;
+            }            
+        }
+        Serial.print ("Caminho Otimizado: ");    
+        Serial.print (finalPath);
+        Serial.print ("\n");
+        initialN ++;
+        finalN ++;
+    }
+      
+    finalN = 0;
+    
+}
+
+// Função para controlar a ponte H
+void engineControl (int left, int right){
+    if (abs(left) == 0) {
+        digitalWrite (PIN_LEFT_A, 0);
+        digitalWrite (PIN_LEFT_B, 0);
+        analogWrite (PIN_LEFT_MOTOR, 255); 
+    }
+    if (abs(right) == 0) {
+        digitalWrite (PIN_RIGHT_A, 0);
+        digitalWrite (PIN_RIGHT_B, 0);
+        analogWrite (PIN_RIGHT_MOTOR, 255); 
+    }
+    if (left > 0){
+        digitalWrite (PIN_LEFT_A, 1);
+        digitalWrite (PIN_LEFT_B, 0);
+        analogWrite (PIN_LEFT_MOTOR, abs(left));
+    }
+    if (right > 0){
+        digitalWrite (PIN_RIGHT_A, 1);
+        digitalWrite (PIN_RIGHT_B, 0);
+        analogWrite (PIN_RIGHT_MOTOR, abs(right));
+    }
+    if (left < 0){
+        digitalWrite (PIN_LEFT_A, 0);
+        digitalWrite (PIN_LEFT_B, 1);
+        analogWrite (PIN_LEFT_MOTOR, abs(left));
+    }
+    if (right < 0){
+        digitalWrite (PIN_RIGHT_A, 0);
+        digitalWrite (PIN_RIGHT_B, 1);
+        analogWrite (PIN_RIGHT_MOTOR, abs(right));
+    }
+}
+
+// Função para seguir a linha
+void followLine(){
+    if ((digitalRead (PIN_SENSOR_2) == modoLinha) && (digitalRead (PIN_SENSOR_3) == modoLinha)){
+        engineControl (FOLLOW_SPEED,FOLLOW_SPEED);
+    }
+    if ((digitalRead (PIN_SENSOR_2) != modoLinha) && (digitalRead (PIN_SENSOR_3) == modoLinha)){
+        engineControl (TURN_SPEED, -TURN_SPEED);
+    }
+    if ((digitalRead (PIN_SENSOR_2) == modoLinha) && (digitalRead (PIN_SENSOR_3) != modoLinha)){
+        engineControl (-TURN_SPEED, TURN_SPEED);
+    }
+    if ((digitalRead (PIN_SENSOR_2) != modoLinha) && (digitalRead (PIN_SENSOR_3) != modoLinha)){
+        engineControl (0,0);
+    }
+}
+
+// Função para virar a direita
+void turnRight(){
+    // while (digitalRead (PIN_SENSOR_3) == modoLinha){
+        // engineControl (TURN_SPEED, -TURN_SPEED);
+    // }
+    // while (digitalRead (PIN_SENSOR_2) == modoLinha){
+        // engineControl (TURN_SPEED, -TURN_SPEED);
+    // }
+    engineControl (TURN_SPEED,-TURN_SPEED);
+    delay (RIGHT_TIME);
+    while (digitalRead (PIN_SENSOR_3) != modoLinha){
+        engineControl (TURN_SPEED, -TURN_SPEED);
+    }
+}
+
+// Função para virar a esquerda
+void turnLeft(){
+    // while (digitalRead (PIN_SENSOR_2) == modoLinha){
+        // engineControl (-TURN_SPEED, TURN_SPEED);
+    // }
+    // while (digitalRead (PIN_SENSOR_3) == modoLinha){
+        // engineControl (-TURN_SPEED, TURN_SPEED);
+    // }
+    engineControl (-TURN_SPEED,TURN_SPEED);
+    delay (LEFT_TIME);
+    while (digitalRead (PIN_SENSOR_2) != modoLinha){
+        engineControl (-TURN_SPEED, TURN_SPEED);
+    }
+}
+
+// Função que toma as decisões ao descobrir o labirinto
+char takeDecision(){
+    delay(10);
+    if (testRight()){
+        return 'D';         
+    } else {
+        if (testFront()){
+            return 'F';
+        } else {
+            if (testLeft()){
+                return 'E';
+            } else {
+                if (testDeadEnd()){
+                    return 'V';
+                } else {
+                    if (testExit()){
+                        return 'S';
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Testa se pode ir em frente
+boolean testFront(){
+    if ((digitalRead(PIN_SENSOR_2) == modoLinha)||(digitalRead(PIN_SENSOR_3) == modoLinha)){
+        return true;
+    } else{
+        return false;
+    }
+}
+
+// Testa de pode virar a direita
+boolean testRight(){
+    if (digitalRead(PIN_SENSOR_4) == modoLinha){
+        return true;
+    } else{
+        return false;
+    }
+}
+
+// Testa de pode virar a esquerda
+boolean testLeft(){
+    if (digitalRead(PIN_SENSOR_1) == modoLinha){
+        return true;
+    } else{
+        return false;
+    }
+}
+
+// Testa se está em um caminho sem saida
+boolean testDeadEnd(){
+    if ((digitalRead(PIN_SENSOR_1) != modoLinha) && (digitalRead(PIN_SENSOR_2) != modoLinha) && (digitalRead(PIN_SENSOR_3) != modoLinha) && (digitalRead(PIN_SENSOR_4) != modoLinha)){
+        return true;
+    } else{
+        return false;
+    }
+}
+
+// Testa se chegou na saida do labirinto
+boolean testExit(){
+    if ((digitalRead(PIN_SENSOR_1) == modoLinha) && (digitalRead(PIN_SENSOR_2) == modoLinha) && (digitalRead(PIN_SENSOR_3) == modoLinha) && (digitalRead(PIN_SENSOR_4) == modoLinha)){
+        return true;
+    } else{
+        return false;
+    }
+}

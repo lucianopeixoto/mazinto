@@ -1,0 +1,97 @@
+/*
+  Line Tracking Robot
+  Luciano Peixoto
+ */
+
+#define PIN_LEFT_MOTOR 6
+#define PIN_RIGHT_MOTOR 3
+#define PIN_LEFT_A 8
+#define PIN_LEFT_B 7
+#define PIN_RIGHT_A 4
+#define PIN_RIGHT_B 2
+#define PIN_SENSOR_1 11
+#define PIN_SENSOR_2 12
+#define PIN_SENSOR_3 11
+#define PIN_SENSOR_4 12
+
+#define TEST_GO 0
+#define BRAKE 256
+
+int turnDuration;
+int flaga = 0;
+
+// Inicializando os pinos e etc...
+// ex: pinMode(13, OUTPUT); 
+void setup() {                
+  Serial.begin (9600);
+  Serial.print ("Iniciando Pinos...\n");
+  pinMode(PIN_LEFT_MOTOR, OUTPUT);
+  analogWrite (PIN_LEFT_MOTOR, 0);
+  pinMode(PIN_RIGHT_MOTOR, OUTPUT);
+  analogWrite (PIN_RIGHT_MOTOR, 0);
+  pinMode(PIN_LEFT_A, OUTPUT);
+  digitalWrite (PIN_LEFT_A, 0);
+  pinMode(PIN_LEFT_B, OUTPUT);
+  digitalWrite (PIN_LEFT_B, 0);  
+  pinMode(PIN_RIGHT_A, OUTPUT);
+  digitalWrite (PIN_RIGHT_A, 0);
+  pinMode(PIN_RIGHT_B, OUTPUT);
+  Serial.print ("Motores...: OK\n");
+  digitalWrite (PIN_RIGHT_B, 0); 
+  pinMode(PIN_L_SENSOR, INPUT); 
+  pinMode(PIN_R_SENSOR, INPUT);
+  Serial.print ("Sensores..: OK\n");
+}
+
+// Loop Principal
+void loop() {
+  int sensors;
+  
+  if ((digitalRead (PIN_L_SENSOR) == TEST_GO) && (digitalRead (PIN_R_SENSOR) == TEST_GO)){
+    engines (130,130);
+  }
+  if ((digitalRead (PIN_L_SENSOR) != TEST_GO) && (digitalRead (PIN_R_SENSOR) == TEST_GO)){
+    engines (-150, 150);
+  }
+  if ((digitalRead (PIN_L_SENSOR) == TEST_GO) && (digitalRead (PIN_R_SENSOR) != TEST_GO)){
+    engines (150, -150);
+  }
+  if ((digitalRead (PIN_L_SENSOR) != TEST_GO) && (digitalRead (PIN_R_SENSOR) != TEST_GO)){
+    engines (0,0);
+  }
+}
+
+void engines (int left, int right){
+  if (abs(left) == 0) {
+    digitalWrite (PIN_LEFT_A, 0);
+    digitalWrite (PIN_LEFT_B, 0);
+    analogWrite (PIN_LEFT_MOTOR, 255); 
+  }
+  if (abs(right) == 0) {
+    digitalWrite (PIN_RIGHT_A, 0);
+    digitalWrite (PIN_RIGHT_B, 0);
+    analogWrite (PIN_RIGHT_MOTOR, 255); 
+  }
+  if (left > 0){
+    digitalWrite (PIN_LEFT_A, 1);
+    digitalWrite (PIN_LEFT_B, 0);
+    analogWrite (PIN_LEFT_MOTOR, abs(left));
+  }
+  if (right > 0){
+    digitalWrite (PIN_RIGHT_A, 1);
+    digitalWrite (PIN_RIGHT_B, 0);
+    analogWrite (PIN_RIGHT_MOTOR, abs(right));
+  }
+  if (left < 0){
+    digitalWrite (PIN_LEFT_A, 0);
+    digitalWrite (PIN_LEFT_B, 1);
+    analogWrite (PIN_LEFT_MOTOR, abs(left));
+  }
+  if (right < 0){
+    digitalWrite (PIN_RIGHT_A, 0);
+    digitalWrite (PIN_RIGHT_B, 1);
+    analogWrite (PIN_RIGHT_MOTOR, abs(right));
+  }
+}
+
+

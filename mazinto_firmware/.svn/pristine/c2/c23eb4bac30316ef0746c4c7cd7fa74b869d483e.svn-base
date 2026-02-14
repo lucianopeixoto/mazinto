@@ -1,0 +1,171 @@
+/*
+  Maze Solving Robot
+  Luciano Peixoto
+*/
+
+#define PIN_LED         13
+#define PIN_LEFT_MOTOR  6
+#define PIN_RIGHT_MOTOR 3
+#define PIN_LEFT_A      8
+#define PIN_LEFT_B      7
+#define PIN_RIGHT_A     4
+#define PIN_RIGHT_B     2
+#define PIN_SENSOR_1    12          // TODO: Rever a pinagem dos sensores
+#define PIN_SENSOR_2    9           //
+#define PIN_SENSOR_3    10          //
+#define PIN_SENSOR_4    11          // -----
+#define FLAG_DEBUG      0b1000000   // Definição das Flags do sistema
+#define FLAG_RETURN     0b0100000   //
+
+#define TEST_LINE       1           // Valor assumido pelos sensores ao detectarem a linha (0 ou 1)
+
+//#define BRAKE 256
+
+int turnDuration;
+byte sysFlag;       // Armazena as flags do sistema, devem cada bit do byte representa uma flag
+                    // Flags: DV** *** Debug Volta
+                    //
+
+void setup() {
+    
+    if (sysFlag & FLAG_DEBUG) Serial.begin (9600);
+    if (sysFlag & FLAG_DEBUG) Serial.print ("Config. inicial carregada...\n");
+    // Inicializando os pinos e etc...
+    // ex: pinMode(13, OUTPUT);
+    if (sysFlag & FLAG_DEBUG) Serial.begin (9600);
+    
+    if (sysFlag & FLAG_DEBUG) Serial.print ("Iniciando Pinos...\n");
+    
+    pinMode(PIN_LED, OUTPUT);
+    digitalWrite (PIN_LED, 0);
+    
+    pinMode(PIN_LEFT_MOTOR, OUTPUT);
+    analogWrite (PIN_LEFT_MOTOR, 0);
+    pinMode(PIN_RIGHT_MOTOR, OUTPUT);
+    analogWrite (PIN_RIGHT_MOTOR, 0);
+    pinMode(PIN_LEFT_A, OUTPUT);
+    digitalWrite (PIN_LEFT_A, 0);
+    pinMode(PIN_LEFT_B, OUTPUT);
+    digitalWrite (PIN_LEFT_B, 0);  
+    pinMode(PIN_RIGHT_A, OUTPUT);
+    digitalWrite (PIN_RIGHT_A, 0);
+    pinMode(PIN_RIGHT_B, OUTPUT);
+    digitalWrite (PIN_RIGHT_B, 0); 
+    if (sysFlag & FLAG_DEBUG) Serial.print ("Motores...: OK\n");
+
+    pinMode(PIN_SENSOR_1, INPUT); 
+    pinMode(PIN_SENSOR_2, INPUT); 
+    pinMode(PIN_SENSOR_3, INPUT); 
+    pinMode(PIN_SENSOR_4, INPUT);
+    if (sysFlag & FLAG_DEBUG) Serial.print ("Sensores..: OK\n");
+}
+
+// Loop Principal
+void loop() {
+    int n;
+    char initialPath[200],
+         finalPath [200];
+    
+    // Contagem regressiva inicial:
+    for (n = 5; n>0; n--){    
+        if (sysFlag & FLAG_DEBUG){
+            Serial.print ("Contagem: ");
+            Serial.print (n);            
+            Serial.print ("\n");
+        }
+        digitalWrite (PIN_LED, 1);
+        delay (200);
+        digitalWrite (PIN_LED, 0);
+        delay (800);
+    }
+    
+    while (1){
+        followLine();
+        if (digitalRead(PIN_SENSOR_4) == TEST_LINE){
+            turnRight();
+        } else {
+            if (digitalRead(PIN_SENSOR_1) == TEST_LINE){
+                turnLeft();
+            }
+        }
+        delay(5); // Tempo para o robô entender que alguma decisão precisa ser tomada
+    }    
+}
+
+// Função para controlar a ponte H
+void engineControl (int left, int right){
+    if (abs(left) == 0) {
+        digitalWrite (PIN_LEFT_A, 0);
+        digitalWrite (PIN_LEFT_B, 0);
+        analogWrite (PIN_LEFT_MOTOR, 255); 
+    }
+    if (abs(right) == 0) {
+        digitalWrite (PIN_RIGHT_A, 0);
+        digitalWrite (PIN_RIGHT_B, 0);
+        analogWrite (PIN_RIGHT_MOTOR, 255); 
+    }
+    if (left > 0){
+        digitalWrite (PIN_LEFT_A, 1);
+        digitalWrite (PIN_LEFT_B, 0);
+        analogWrite (PIN_LEFT_MOTOR, abs(left));
+    }
+    if (right > 0){
+        digitalWrite (PIN_RIGHT_A, 1);
+        digitalWrite (PIN_RIGHT_B, 0);
+        analogWrite (PIN_RIGHT_MOTOR, abs(right));
+    }
+    if (left < 0){
+        digitalWrite (PIN_LEFT_A, 0);
+        digitalWrite (PIN_LEFT_B, 1);
+        analogWrite (PIN_LEFT_MOTOR, abs(left));
+    }
+    if (right < 0){
+        digitalWrite (PIN_RIGHT_A, 0);
+        digitalWrite (PIN_RIGHT_B, 1);
+        analogWrite (PIN_RIGHT_MOTOR, abs(right));
+    }
+}
+
+// Função para seguir a linha
+void followLine(){
+    if ((digitalRead (PIN_SENSOR_2) == TEST_LINE) && (digitalRead (PIN_SENSOR_3) == TEST_LINE)){
+        engineControl (100,100);
+    }
+    if ((digitalRead (PIN_SENSOR_2) != TEST_LINE) && (digitalRead (PIN_SENSOR_3) == TEST_LINE)){
+        engineControl (150, -150);
+    }
+    if ((digitalRead (PIN_SENSOR_2) == TEST_LINE) && (digitalRead (PIN_SENSOR_3) != TEST_LINE)){
+        engineControl (-150, 150);
+    }
+    if ((digitalRead (PIN_SENSOR_2) != TEST_LINE) && (digitalRead (PIN_SENSOR_3) != TEST_LINE)){
+        engineControl (0,0);
+    }
+}
+
+// Função para virar a direita
+void turnRight(){
+    while (digitalRead (PIN_SENSOR_3) == TEST_LINE){
+        engineControl (130, -130);
+    }
+    while (digitalRead (PIN_SENSOR_2) == TEST_LINE){
+        engineControl (130, -130);
+    }
+    while (digitalRead (PIN_SENSOR_3) != TEST_LINE){
+        engineControl (130, -130);
+    }
+}
+
+// Função para virar a esquerda
+void turnLeft(){
+    while (digitalRead (PIN_SENSOR_2) == TEST_LINE){
+        engineControl (-130, 130);
+    }
+    while (digitalRead (PIN_SENSOR_3) == TEST_LINE){
+        engineControl (-130, 130);
+    }
+    while (digitalRead (PIN_SENSOR_2) != TEST_LINE){
+        engineControl (-130, 130);
+    }
+}
+
+

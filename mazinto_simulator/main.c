@@ -1,0 +1,146 @@
+/////////////////////////////////////////////////////////////////////
+// Mazinto Simulator
+// Simulador do robô solucionador de labirinto
+// Luciano Peixoto
+// Erik Kulhavy
+// Unifacs
+// Projeto Arhte 2012.2
+/////////////////////////////////////////////////////////////////////
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main(int argc, char *argv[])
+{
+    FILE *arquivoInicial;
+	FILE *arquivoFinal;
+    int n = 0,
+		nInicial = 0,
+        nParcial = 0;
+    char chaveInicial[1000], 
+         chaveParcial[1000],
+         nomeArquivoI[50],
+         nomeArquivoF[50];
+    
+	for (n = 0; n < 1000; n++){
+		chaveParcial[n] = '\0';
+	}
+	arquivoInicial = NULL;
+	while (arquivoInicial==NULL){
+        printf ("--------------------------------------------------------------------------------\n");
+        printf ("- Mazinto - Simulador do Solucionador de Labirinto                             -\n");
+        printf ("- v0.1 - 06/10/2012                                                            -\n");
+        printf ("- Luciano Peixoto                                                              -\n");
+        printf ("- Erik Kulhavy                                                                 -\n");
+        printf ("--------------------------------------------------------------------------------\n");
+        
+        printf ("Para mais informa%c%ces e instru%c%ces, utilizar o arquivo Ajuda.txt\n", 135, 228, 135, 228);
+        printf ("Digite o nome do arquivo txt inicial (sem .txt):\n");
+		scanf ("%s", &nomeArquivoI);
+		strcpy (nomeArquivoF, nomeArquivoI);
+		strcat (nomeArquivoI, ".txt");
+		strcat (nomeArquivoF, "_result.txt");
+        arquivoInicial = fopen(nomeArquivoI, "r");
+		if (arquivoInicial!=NULL){
+			fgets(chaveInicial, 1000, arquivoInicial);
+			fclose(arquivoInicial);
+		}
+		else {
+			printf("Arquivo %s nao encontrado.\n", nomeArquivoI);
+		}
+	}
+	
+    printf("Resolvendo. . .\n\n");
+    
+    while (chaveInicial[nInicial-1] != 'S'){
+        // Inicio do tratamento das decisões:
+		chaveParcial[nParcial] = chaveInicial[nInicial];
+		printf("- - - - - - - - - - - - -\nPasso %d:\n", nInicial);
+		printf("         ");
+		for (n = 0; n < nInicial; n++){
+            printf(" ");
+        }
+        printf("%c\n", 31);
+		printf("Inicial: %s\n", chaveInicial);
+        // Se a decisão for V (Voltar)
+        while (chaveParcial[nParcial] == 'V'){
+			nInicial ++;
+			nParcial --;
+			printf("Troca ");
+            switch (chaveParcial[nParcial]){
+                case 'D':
+                    switch (chaveInicial[nInicial]){
+                        case 'D':
+							printf ("DVD -> F\n");
+                            chaveParcial[nParcial] = 'F';
+                            break;
+                        case 'F':
+							printf ("DVF -> E\n");
+                            chaveParcial[nParcial] = 'E';
+                            break;
+                        case 'E':
+							printf ("DVE -> V\n");
+                            chaveParcial[nParcial] = 'V';
+                            break;
+                    }
+                    break;
+                case 'F':
+                    switch (chaveInicial[nInicial]){
+                        case 'D':
+							printf ("FVD -> E\n");
+                            chaveParcial[nParcial] = 'E';
+                            break;
+                        case 'F':
+							printf ("FVF -> V\n");
+                            chaveParcial[nParcial] = 'V';
+                            break;
+                        case 'E':
+							printf ("FVE -> V\n");
+                            chaveParcial[nParcial] = 'V';
+                            break;
+                    }
+                    break;
+                case 'E':
+                    switch (chaveInicial[nInicial]){
+                        case 'D':
+							printf ("EVD -> V\n");
+                            chaveParcial[nParcial] = 'V';
+                            break;
+                        case 'F':
+							printf ("EVF -> D\n");
+                            chaveParcial[nParcial] = 'D';
+                            break;
+                        case 'E':
+							printf ("EVE -> F\n");
+                            chaveParcial[nParcial] = 'F';
+                            break;
+                    }
+                    break;
+                case 'V':
+                    printf ("\n- - - - - - - - - - - - -\nERRO NO LABIRINTO\n\n");
+                    system("PAUSE");
+                    return 0;
+                    break;
+            }            
+        }
+		printf("Parcial: %s \n\n", chaveParcial);
+		nInicial ++;
+		nParcial ++;
+    }
+    chaveParcial[nParcial]='\0';
+    arquivoFinal = fopen(nomeArquivoF, "w");
+	if (arquivoFinal!=NULL){
+		fputs(chaveParcial, arquivoFinal);
+	}
+	fclose(arquivoFinal);
+    
+    printf ("- - - - - - - - - - - - -\n\n- Caminho Otimizado: %s\n\n", chaveParcial);        
+	printf ("- O caminho otimizado foi salvo em %s.\n", nomeArquivoF);
+	printf ("- Foram removidos %d movimentos desnecessarios.\n", nInicial-nParcial );
+	printf ("- O caminho foi otimizado em aproximadamente %d vezes.\n\n", (nInicial/nParcial) );
+	
+    system("PAUSE");
+    return 0;
+}
